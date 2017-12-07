@@ -32,8 +32,10 @@ void server_start(server_t *server, char *server_name, int perms) {
     exit(1);
   }
 
-  // set n_clients
+  printf("The server is fired up. Waiting for people");
   server->n_clients = 0;
+
+  return;
 }
 
 void server_shutdown(server_t *server) {
@@ -54,7 +56,7 @@ void server_shutdown(server_t *server) {
 
   mesg_t notice;
   notice.kind = BL_SHUTDOWN;
-  server_broadcast(server, notice);// Send a BL_SHUTDOWN message to all
+  server_broadcast(server, &notice);// Send a BL_SHUTDOWN message to all
 }
 
 //******************************************************************************
@@ -106,7 +108,7 @@ int server_remove_client(server_t *server, int idx) {
 }
 
 int server_broadcast(server_t *server, mesg_t *mesg) {
-  for (i=0, i< server->n_clients, i++){
+  for (int i=0; i< server->n_clients; i++){
     write(server->client[i].to_client_fd, &mesg, sizeof(mesg_t));
   }
   return 0;
@@ -117,24 +119,29 @@ void server_check_sources(server_t *server){
   int nfds;
   fd_set readset;
   maxfd = server->client[0].to_server_fd;
-  for (i=0, i<server->n_clients, i++){
+  for (int i=0; i<server->n_clients; i++){
     if (server->client[i].to_server_fd > maxfd){
       maxfd = server->client[i].to_server_fd;
     }
-    fd_set(server->client[i].to_server_fd, &readset);
+    FD_SET(server->client[i].to_server_fd, &readset);
   }
-  fd_set(server->join_fd, &readset);
+  FD_SET(server->join_fd, &readset);
   nfds = select(maxfd+1, &readset, NULL, NULL, NULL);
-  if(ndfs<0){
+  if(nfds<0){
     perror("select() failed");
     exit(1);
   }
-  server->join_ready = 0;
-  for(i=0, i<server->n_clients, i++){
-      if (FD_ISSET(server->client[i]->to_server_fd, &readset)!=0){
-          server->client[i]->data_ready = 1;  //1 for ready
+  //server->join_ready = 0;
+  for(int i=0; i<server->n_clients; i++){
+      if (FD_ISSET(server->client[i].to_server_fd, &readset)!=0){
+          server->client[i].data_ready = 1;  //1 for ready
       }
   }
+  if((server->n_clients<MAXCLIENTS) && (FD_ISSET(server->join_fd, &readset)!=0)) {
+    server->join_ready = 1;
+  } else{
+    server->join_ready = 0;
+    }
   return;
 // Checks all sources of data for the server to determine if any are
 // ready for reading. Sets the servers join_ready flag and the
@@ -144,11 +151,7 @@ void server_check_sources(server_t *server){
 }
 
 int server_join_ready(server_t *server){
-  if(server->n_clients<MAXCLIENTS) && (FD_ISSET(server->join_fd, &readset)!=0) {
-    server->join_ready = 1;
-  } else{
-    server->join_ready = 0;
-  }
+
   return server->join_ready;// Return the join_ready flag from the server which indicates whether
 // a call to server_handle_join() is safe.
 }
@@ -161,16 +164,21 @@ int server_handle_join(server_t *server){
   return server->join_ready;
 }
 
+int server_client_ready(server_t *server, int idx){
+  // Return the data_ready field of the given client which indicates
+  return server->client[idx].data_ready;// whether the client has data ready to be read from it.
+}
+
 int server_handle_client(server_t *server, int idx){
   if(server_client_ready(server, idx)) {// Process a message from the specified client. This function should
       mesg_t mesg;
       int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t)); // only be called if server_client_ready() returns true.
-      if(mesg->kind == 10){   // Departure and Message types should be broadcast to all other clients.
+      if(mesg.kind == 10){   // Departure and Message types should be broadcast to all other clients.
         server_broadcast(server, &mesg);
         return 0;
       }
       else {//no name no body
-          mesg->name = client->name;
+          strcpy(mesg.name, server->client[idx].name);
           server_broadcast(server, &mesg);
       }
      // server time_sec.

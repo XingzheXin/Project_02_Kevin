@@ -46,7 +46,7 @@ void *background_worker(void *arg){
 // Signal Handler here
 // Do we even need a signal handler?
 // If we use signal handlers we might need to expand
-// join_t a little bit to add a "pid" field such that 
+// join_t a little bit to add a "pid" field such that
 // the server knows who to send alert to?
 // Or we can just not use signals and let all the clients do "busy wait"
 // i.e. they all hang at "read"
@@ -66,11 +66,11 @@ int main(int argc, char *argv[]) {
 
 	// construct a join_t structure ready to be sent to server fifo
 	join_t client_info;
-	
+
 	char server_fname[MAXPATH];
 	char to_client_fname[MAXPATH];
 	char to_server_fname[MAXPATH];
-	
+
 	// Sets to_client_fname to the following format
 	// <server_name>_to_<user_name>.fifo
 	strcpy(to_client_fname, argv[1]);
@@ -78,13 +78,13 @@ int main(int argc, char *argv[]) {
 	strcat(to_client_fname, argv[2]);
 	strcat(to_client_fname, ".fifo");
 
-	// Sets to_server_fname to the following format:	
+	// Sets to_server_fname to the following format:
 	// <user_name>_to_<server_name.fifo
 	strcpy(to_server_fname, argv[2]);
 	strcat(to_server_fname, "_to_");
 	strcat(to_server_fname, argv[1]);
-	strcat(to_server_fname, ".fifo");	
-	
+	strcat(to_server_fname, ".fifo");
+
 	// Sets the fields of the outgoing join_t structure
 	strcpy(client_info.name, argv[2]);
 	strcpy(client_info.to_client_fname, to_client_fname);
@@ -97,15 +97,9 @@ int main(int argc, char *argv[]) {
 	// Maybe should include some error checking here
 	// What if the fifo does not exist
 	int join_fd = open(server_fname, O_RDWR);
-	
+
 	// Write the join_t structure to <server_name>.fifo
 	write(join_fd, &client_info, sizeof(join_t));
-	
-	mesg_t msg;
-	msg.kind = BL_MESG;
-
-	mesg_t msg2;
-	msg2.kind = 20;
 
 	// ***************************************************
   char prompt[MAXNAME];
@@ -118,11 +112,10 @@ int main(int argc, char *argv[]) {
   pthread_create(&background_thread, NULL, background_worker, NULL);
   pthread_join(user_thread, NULL);
   pthread_join(background_thread, NULL);
-  
+
   simpio_reset_terminal_mode();
   printf("\n");                 // newline just to make returning to the terminal prettier
- 
+
 	// ***************************************************
 	return 0;
 }
-

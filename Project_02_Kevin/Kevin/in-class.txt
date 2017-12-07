@@ -1,0 +1,52 @@
+int ret = select( ... );
+
+if(ret != 1) {
+	...
+	FD_ISSET(...);
+}
+
+*******************
+
+// bl-server.c:
+
+main() {
+	// set up signal handling
+	
+	listen(listen_fd, BACKLOG);
+	
+	while(1) {
+
+	int clinet_fd = accept(listen_fd, client_addr, ..);
+
+	...
+	
+	check_sources(...);
+	...
+}
+
+
+
+// Pause Server
+
+#define PORT 3490
+
+getaddrinfo( ..., &addr, PORT, ...);
+
+listen_fd = socket(...(Socket type (internet socket)), TCP, ...);
+bind(listen_fd, addr, ...);
+
+listen(listen_fd, ...);
+
+int cfds[4];
+
+for(int i = 0 ; i < 4; i++) {
+	// accept blocks until connection is established
+	cfds[i] = accept(listen_fd, ...);
+}
+
+for(int i = 0; i < 4; i++) {
+	char *msg = "BYE";
+	write(cfds[i], msg, strlen(msg));
+	close(cfds[i]);
+}
+

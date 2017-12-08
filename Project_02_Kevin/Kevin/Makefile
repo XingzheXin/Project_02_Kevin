@@ -29,8 +29,8 @@ simpio.o: simpio.c blather.h
 
 clean:
 	@echo Cleaning up object files
-	rm -f *.o
+	rm -f *.o *.fifo
 
 realclean:
 	@echo Removing objects and programs
-	rm -f *.o bl-client bl-server
+	rm -f *.o *.fifo bl-client bl-server

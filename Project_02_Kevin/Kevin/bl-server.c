@@ -23,29 +23,33 @@ void handle_signals(int sig_num){
 }
 
 int main(int argc, char *argv[]) {
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stdin, NULL, _IONBF, 0);
-  struct sigaction my_sa = {};   // portable signal handling setup with sigaction()
-  my_sa.sa_handler = handle_signals;   // run function handle_signals
-  sigaction(SIGTERM, &my_sa, NULL);    // register SIGCONT with given action
-  sigaction(SIGINT,  &my_sa, NULL);    // register SIGCONT with given action
 
-  if (argc!=2){
+  // check inputs
+  if (argc < 2){
     printf("usage: %s <name>\n",argv[0]);
     exit(1);
   }
+
+  // setvbuf(stdout, NULL, _IONBF, 0);
+  struct sigaction my_sa = {};   // portable signal handling setup with sigaction()
+  my_sa.sa_handler = handle_signals;   // run function handle_signals
+  sigemptyset(&my_sa.sa_mask);
+  my_sa.sa_flags = SA_RESTART;
+  sigaction(SIGTERM, &my_sa, NULL);    // register SIGCONT with given action
+  sigaction(SIGINT,  &my_sa, NULL);    // register SIGCONT with given action
+
+
   server_t server;
   server_start(&server, argv[1], DEFAULT_PERMS);
-//  printf("The server is fired up. Waiting for people");
 
   while(!signalled){
     server_check_sources(&server);
 
-    if(server_join_ready(&server)==1){
+    if(server_join_ready(&server)){
       server_handle_join(&server);
     }
     for (int i=0; i<server.n_clients; i++){
-       if(server_client_ready(&server, i)==1){
+       if(server_client_ready(&server, i)){
          server_handle_client(&server, i);
        }
     }

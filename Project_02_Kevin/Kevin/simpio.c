@@ -7,7 +7,7 @@ static struct termios oldt, newt; // structs to change the terminal input mode
 // immediately
 void simpio_noncanonical_terminal_mode(){
   // Turn off output buffering
-  setvbuf(stdout, NULL, _IONBF, 0); 
+  setvbuf(stdout, NULL, _IONBF, 0);
 
   // tcgetattr gets the parameters of the current terminal
   // STDIN_FILENO will tell tcgetattr that it should write the
@@ -20,8 +20,8 @@ void simpio_noncanonical_terminal_mode(){
   // ICANON normally takes care that one line at a time will be
   // processed that means it will return if it sees a "\n" or an EOF
   // or an EOL
-  newt.c_lflag &= ~(ICANON | ECHO); 
-  //  newt.c_lflag &= ~(ICANON);          
+  newt.c_lflag &= ~(ICANON | ECHO);
+  //  newt.c_lflag &= ~(ICANON);
 
   // Those new settings will be set to STDIN TCSANOW tells tcsetattr
   // to change attributes immediately.
@@ -56,27 +56,27 @@ void simpio_set_prompt(simpio_t *simpio, char *prompt){
 // may vary.  Read a character from the input associated with
 // simpio. Fields are adjusted to reflect the state of input after
 // reading the character. Typically:
-// 
+//
 // - simpio->pos will increase
 // - simpio->buf will get one more character
-// - simpio->line_ready may be set to 1 if a line is completed 
+// - simpio->line_ready may be set to 1 if a line is completed
 // - for backspaces, buf and pos decrease
-// 
-// This funciton is used in a loop to read input until line_ready is 1. 
+//
+// This funciton is used in a loop to read input until line_ready is 1.
 void simpio_get_char(simpio_t *simpio){
   int c = fgetc(simpio->infile);
   if(0){}
   else if(c == '\n' && simpio->pos > 0){
     simpio->buf[simpio->pos] = '\0';
     simpio->line_ready = 1;
-  }    
+  }
   else if((c == '\b' || c == DEL || c == '\n') && simpio->pos == 0){
     // ignore enter, backspace without input
-  }    
+  }
   else if(c == EOT && simpio->pos > 0){
     simpio->buf[simpio->pos] = '\0';
     simpio->line_ready = 1;
-  }    
+  }
   else if((c == '\b' || c == DEL) && simpio->pos > 0){ // backspace or delete
     simpio->pos = simpio->pos-1;
     simpio->buf[simpio->pos] = '\0';
@@ -107,7 +107,7 @@ void iprintf(simpio_t *simpio, char *fmt, ...){
   va_end(myargs);
   off += snprintf(output+off, max-off, "%s", simpio->prompt); // add prompt back
   off += snprintf(output+off, max-off, "%s", simpio->buf);    // current typed input
-  
+
   int fd = fileno(simpio->outfile);
   write(fd, output, off);
 

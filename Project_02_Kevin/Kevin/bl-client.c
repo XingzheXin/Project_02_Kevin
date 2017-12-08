@@ -12,16 +12,16 @@ pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
 void *user_worker(void *arg){
-  int count = 1;
+  //int count = 1;
   while(!simpio->end_of_input){
     simpio_reset(simpio);
     iprintf(simpio, "");                                          // print prompt
-    while(!simpio->line_ready && !simpio->end_of_input){          // read until line is complete
+    while(!simpio->line_ready && !simpio->end_of_input) {          // read until line is complete
       simpio_get_char(simpio);
     }
     if(simpio->line_ready){
-      iprintf(simpio, "%2d You entered: %s\n",count,simpio->buf);
-      count++;
+      //iprintf(simpio, "%2d You entered: %s\n",count,simpio->buf);
+      //count++;
     }
   }
 
@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+  client_t client;
 	// construct a join_t structure ready to be sent to server fifo
 	join_t client_info;
 
@@ -71,35 +72,54 @@ int main(int argc, char *argv[]) {
 	char to_client_fname[MAXPATH];
 	char to_server_fname[MAXPATH];
 
+  strcpy(client.name, argv[2]);
 	// Sets to_client_fname to the following format
 	// <server_name>_to_<user_name>.fifo
-	strcpy(to_client_fname, argv[1]);
-	strcat(to_client_fname, "_to_");
-	strcat(to_client_fname, argv[2]);
-	strcat(to_client_fname, ".fifo");
+	strcpy(client.to_client_fname, argv[1]);
+	strcat(client.to_client_fname, "_to_");
+	strcat(client.to_client_fname, argv[2]);
+	strcat(client.to_client_fname, ".fifo");
 
 	// Sets to_server_fname to the following format:
 	// <user_name>_to_<server_name.fifo
-	strcpy(to_server_fname, argv[2]);
-	strcat(to_server_fname, "_to_");
-	strcat(to_server_fname, argv[1]);
-	strcat(to_server_fname, ".fifo");
+	strcpy(client.to_server_fname, argv[2]);
+	strcat(client.to_server_fname, "_to_");
+	strcat(client.to_server_fname, argv[1]);
+	strcat(client.to_server_fname, ".fifo");
 
 	// Sets the fields of the outgoing join_t structure
-	strcpy(client_info.name, argv[2]);
-	strcpy(client_info.to_client_fname, to_client_fname);
-	strcpy(client_info.to_server_fname, to_server_fname);
+	strcpy(client_info.name, client.name);
+	strcpy(client_info.to_client_fname, client.to_client_fname);
+	strcpy(client_info.to_server_fname, client.to_server_fname);
 
 	// Open <server_name>.fifo
 	strcpy(server_fname, argv[1]);
 	strcat(server_fname, ".fifo");
 
+  // remove existing fifos
+  remove(to_client_fname);
+  remove(to_server_fname);
+
+  // make new fifos
+  mkfifo(to_client_fname, DEFAULT_PERMS);
+  mkfifo(to_server_fname, DEFAULT_PERMS);
+
+  // Open the two fifos that are created
+  client.to_client_fd = open(to_client_fname, O_RDWR);
+  client.to_server_fd = open(to_server_fname, O_RDWR);
+
 	// Maybe should include some error checking here
 	// What if the fifo does not exist
 	int join_fd = open(server_fname, O_RDWR);
 
+  printf("Writing join_t struct to server....");
+  fflush(STDOUT_FILENO);
 	// Write the join_t structure to <server_name>.fifo
-	write(join_fd, &client_info, sizeof(join_t));
+	int check = write(join_fd, &client_info, sizeof(join_t));
+  if(check == -1) {
+    perror("ERRORNO indicates: ");
+    exit(1);
+  }
 
 	// ***************************************************
   char prompt[MAXNAME];

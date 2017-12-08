@@ -24,6 +24,7 @@ void handle_signals(int sig_num){
 
 int main(int argc, char *argv[]) {
   setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stdin, NULL, _IONBF, 0);
   struct sigaction my_sa = {};   // portable signal handling setup with sigaction()
   my_sa.sa_handler = handle_signals;   // run function handle_signals
   sigaction(SIGTERM, &my_sa, NULL);    // register SIGCONT with given action
@@ -33,10 +34,9 @@ int main(int argc, char *argv[]) {
     printf("usage: %s <name>\n",argv[0]);
     exit(1);
   }
-  printf("starting server\n");
   server_t server;
   server_start(&server, argv[1], DEFAULT_PERMS);
-  printf("The server is fired up. Waiting for people");
+//  printf("The server is fired up. Waiting for people");
 
   while(!signalled){
     server_check_sources(&server);

@@ -21,10 +21,14 @@ void server_start(server_t *server, char *server_name, int perms) {
   remove(fifo_name);
 
   // create new fifo
-  mkfifo(fifo_name, perms);
+  if (mkfifo(fifo_name, perms)==-1){
+    perror("couldn't make fifo");
+  };
 
   // initialize join_fd
-  server->join_fd = open(fifo_name, perms);
+  if(server->join_fd = open(fifo_name, O_RDWR)==-1){
+    perror("Failed to open join fifo");
+  }
 
   // initialize server name
   if(strlen(server_name) >= MAXPATH) {
@@ -32,7 +36,7 @@ void server_start(server_t *server, char *server_name, int perms) {
     exit(1);
   }
 
-  printf("The server is fired up. Waiting for people");
+  printf("The server is fired up. Waiting for people\n");
   server->n_clients = 0;
 
   return;
@@ -76,7 +80,11 @@ int server_add_client(server_t *server, join_t *join) {
 	strcpy(server->client[n-1].to_server_fname, join->to_server_fname);
 	strcpy(server->client[n-1].to_server_fname, join->name);
 
-
+  server->client[n-1].to_server_fd = open(server->client[n-1].to_server_fname, O_RDWR);
+  server->client[n-1].to_client_fd = open(server->client[n-1].to_client_fname, O_RDWR);
+  server->client[n-1].data_ready=0;
+  printf("%d\n", server->n_clients);
+  printf("%s has joined\n", server->client[n-1].name);
 	return 0;
 }
 

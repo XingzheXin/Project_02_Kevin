@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <semaphore.h>
+#include <sys/time.h>
+#include <sys/select.h>
 
 #define DEBUG 1                 // turn of/off debug printing
 #define PROMPT ">> "            // prompt for client UI

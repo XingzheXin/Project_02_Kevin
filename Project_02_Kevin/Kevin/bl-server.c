@@ -37,22 +37,30 @@ int main(int argc, char *argv[]) {
   my_sa.sa_flags = SA_RESTART;
   sigaction(SIGTERM, &my_sa, NULL);    // register SIGCONT with given action
   sigaction(SIGINT,  &my_sa, NULL);    // register SIGCONT with given action
+  //sigaction(SIGALRM, &my_sa, NULL);
 
 
   server_t server;
   server_start(&server, argv[1], DEFAULT_PERMS);
 
+  //alarm(ALARM_INTERVAL);
   while(!signalled){
-    server_check_sources(&server);
 
-    if(server_join_ready(&server)){
-      server_handle_join(&server);
-    }
-    for (int i=0; i<server.n_clients; i++){
-       if(server_client_ready(&server, i)){
-         server_handle_client(&server, i);
-       }
-    }
+    //else {
+      server_check_sources(&server);
+
+      if(server_join_ready(&server)){
+        server_handle_join(&server);
+      }
+      for (int i=0; i<server.n_clients; i++){
+         if(server_client_ready(&server, i)){
+           server_handle_client(&server, i);
+         }
+      }
+  //  }
+    //sleep(1);
+  //if(signalled)
+  //  server_remove_disconnected(&server, DISCONNECT_SECS);
   }
   server_shutdown(&server);
   return 0;

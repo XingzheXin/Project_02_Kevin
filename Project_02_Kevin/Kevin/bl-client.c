@@ -18,15 +18,21 @@ void *user_worker(void *arg){
     while(!simpio->line_ready && !simpio->end_of_input) {          // read until line is complete
       simpio_get_char(simpio);
     }
+    mesg_t msg;
     if(simpio->line_ready){
       // iprintf(simpio, "%2d You entered: %s\n",count,simpio->buf);
       // count++;
       iprintf(simpio, "");
-      mesg_t msg;
       msg.kind = BL_MESG;
+      strcpy(msg.name, client_actual.name);
       strcpy(msg.body, simpio->buf);
-      write(client_actual.to_server_fd, &msg, sizeof(mesg_t));
+
     }
+    else if(simpio->end_of_input) {
+      strcpy(msg.name, client_actual.name);
+      msg.kind = BL_DEPARTED;
+    }
+    write(client_actual.to_server_fd, &msg, sizeof(mesg_t));
   }
   pthread_cancel(background_thread); // kill the background thread
   return NULL;
@@ -36,16 +42,29 @@ void *background_worker(void *arg){
   while(1) {
     sleep(1);
     mesg_t msg;
+    mesg_t ping_msg;
     read(client_actual.to_client_fd, &msg, sizeof(mesg_t));
     switch(msg.kind) {
       case BL_MESG:
         iprintf(simpio, "[%s] : %s\n", msg.name, msg.body);
+        break;
       case BL_JOINED:
         iprintf(simpio, "-- %s JOINED --\n", msg.name);
+        break;
       case BL_DEPARTED:
         iprintf(simpio, "-- %s DEPARTED --\n", msg.name);
+        break;
       case BL_SHUTDOWN:
         iprintf(simpio, "!!! server is shutting down !!!");
+        break;
+      case BL_PING:
+        ping_msg.kind = BL_PING;
+        strcpy(ping_msg.name, client_actual.name);
+        write(client_actual.to_server_fd, &ping_msg, sizeof(mesg_t));
+        break;
+      case BL_DISCONNECTED:
+        iprintf(simpio, "-- %s DISCONNECTED --\n", msg.name);
+        break;
     }
   }
   return NULL;
@@ -65,14 +84,14 @@ int main(int argc, char *argv[]) {
 	char join_fname[MAXPATH];
 
   strcpy(client_actual.name, argv[2]);
-  sprintf(join_fname, "%s.fifo", argv[1]);
+  sprintf(join_fname, "%s.fifo\0", argv[1]);
 	// Sets to_client_actual_fname to the following format
 	// pid.client.fifo
-  sprintf(client_actual.to_client_fname, "%d_client.fifo", pid);
+  sprintf(client_actual.to_client_fname, "%d_client.fifo\0", pid);
 
 	// Sets to_server_fname to the following format:
 	// pid.server.fifo
-  sprintf(client_actual.to_server_fname, "%d_server.fifo", pid);
+  sprintf(client_actual.to_server_fname, "%d_server.fifo\0", pid);
 
 	// Sets the fields of the outgoing join_t structure
 	strcpy(join.name, client_actual.name);

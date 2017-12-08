@@ -13,7 +13,7 @@ client_t *server_get_client(server_t *server, int idx) {
 void server_start(server_t *server, char *server_name, int perms) {
   // create a string with ".fifo" appended to server_name
   char fifo_name[MAXPATH];
-  sprintf(fifo_name, "%s.fifo", server_name);
+  sprintf(fifo_name, "%s.fifo\0", server_name);
   // remove old fifo
   remove(fifo_name);
 
@@ -44,7 +44,7 @@ void server_start(server_t *server, char *server_name, int perms) {
 
 void server_shutdown(server_t *server) {
   char fifo_name[MAXPATH];
-	sprintf(fifo_name, "%s.fifo", server->server_name);
+	sprintf(fifo_name, "%s.fifo\0", server->server_name);
 
  	//close the join fifo
 	close(server->join_fd);
@@ -66,6 +66,7 @@ void server_shutdown(server_t *server) {
 
 //******************************************************************************
 int server_add_client(server_t *server, join_t *join) {
+  int timestamp = (int)time(NULL);
 	int n = server->n_clients;
 	// check if server has any space left
 	if(server->n_clients >= MAXCLIENTS)	{
@@ -81,9 +82,14 @@ int server_add_client(server_t *server, join_t *join) {
   server->client[n].to_server_fd = open(server->client[n].to_server_fname, O_RDWR);
   server->client[n].to_client_fd = open(server->client[n].to_client_fname, O_RDWR);
   server->client[n].data_ready=0;
+  server->client[n].last_contact_time =
   server->n_clients += 1;
 
   printf("%s has joined\n", server->client[n].name);
+  mesg_t msg;
+  strcpy(msg.name, join->name);
+  msg.kind = BL_JOINED;
+  server_broadcast(server, &msg);
 	return 0;
 }
 
@@ -125,11 +131,11 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
 }
 
 void server_check_sources(server_t *server){
+  printf("server->join_fd = %d\n", server->join_fd);
   // return if there are no exisiting clients.
-  int maxfd = server->client[0].to_server_fd;
+  int maxfd = server->join_fd;
   fd_set readset;
   FD_ZERO(&readset);
-
   // Find the maximum file descriptor
   for (int i=0; i<server->n_clients; i++){
     if (server->client[i].to_server_fd > maxfd){
@@ -138,12 +144,22 @@ void server_check_sources(server_t *server){
     // Add all to_server fds to the readset
     FD_SET(server->client[i].to_server_fd, &readset);
   }
+  //
+  // if(maxfd < server->join_fd)  {
+  //   maxfd = server->join_fd;
+  // }
+
   // Add the join_fd to readset
   FD_SET(server->join_fd, &readset);
-  printf("Here_02\n");
+  //printf("Here_02fwfwf\n");
+  //printf("maxfd+1 = %d", maxfd+1);
+  // struct timeval tv = {};
+  // tv.tv_sec = 10;
+  // tv.tv_usec = 0;
   // Now go to sleep until something is ready for reading
-  select(maxfd+1, &readset, NULL, NULL, NULL);
-  printf("Here_03\n");
+  int nfds = select(maxfd+1, &readset, NULL, NULL, NULL);
+
+  //printf("Here_03\n");
   // Wakes up because something is ready
   // Iterates through every single to_server fifo and look for a message.
   for(int i=0; i<server->n_clients; i++){
@@ -152,13 +168,13 @@ void server_check_sources(server_t *server){
           server->client[i].data_ready = 1;  //1 for ready
       }
   }
-  printf("Here_03\n");
+  //printf("Here_03\n");
   // This sets the join_ready flag for the server
   // If there is a join ready, join_ready will be a non-zero value
   // If there is none, FD_ISSET will set join_ready flag to zero.
   server->join_ready = FD_ISSET(server->join_fd, &readset);
-  printf("here__23: %d\n",server->join_ready);
-  printf("Here_04\n");
+  //printf("here__23: %d\n",server->join_ready);
+  //printf("Here_04\n");
   return;
 // Checks all sources of data for the server to determine if any are
 // ready for reading. Sets the servers join_ready flag and the
@@ -203,11 +219,17 @@ int server_handle_client(server_t *server, int idx){
       server->client[idx].data_ready = 0;
       mesg_t mesg;
       int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t)); // only be called if server_client_ready() returns true.
+      printf("mesg->name: %s\n", mesg.name);
+      printf("mesg->kind: %d\n", mesg.kind);
+      printf("mesg->body: %s\n", mesg.body);
       switch(mesg.kind) {
         case BL_MESG:
         case BL_JOINED:
+        case BL_PING:
+          server->client[idx].last_contact_time = (int)time(NULL);
         case BL_DEPARTED:
           server_broadcast(server, &mesg);
+
       }
 
   }
@@ -216,4 +238,19 @@ int server_handle_client(server_t *server, int idx){
   // ADVANCED: Update the last_contact_time of the client to the current
   // Ping responses should only change the last_contact_time below. Behavior
   // for other message types is not specified. Clear the client's data_ready flag so it has value 0.
+}
+
+void server_remove_disconnected(server_t *server, int disconnect_secs) {
+  mesg_t msg;
+  msg.kind = BL_PING;
+  server_broadcast(server, &msg);
+  for(int i = 0; i < server->n_clients; i++) {
+    if((int)time(NULL) - server->client[i].last_contact_time > disconnect_secs) {
+      server_remove_client(server, i);
+      msg.kind = BL_DISCONNECTED;
+      strcpy(msg.name, server->client[i].name);
+      server_broadcast(server, &msg);
+    }
+  }
+  return NULL;
 }

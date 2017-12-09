@@ -13,7 +13,7 @@ client_t *server_get_client(server_t *server, int idx) {
 void server_start(server_t *server, char *server_name, int perms) {
   // create a string with ".fifo" appended to server_name
   char fifo_name[MAXPATH];
-  sprintf(fifo_name, "%s.fifo\0", server_name);
+  sprintf(fifo_name, "%s.fifo", server_name);
   // remove old fifo
   remove(fifo_name);
 
@@ -44,7 +44,7 @@ void server_start(server_t *server, char *server_name, int perms) {
 
 void server_shutdown(server_t *server) {
   char fifo_name[MAXPATH];
-	sprintf(fifo_name, "%s.fifo\0", server->server_name);
+	sprintf(fifo_name, "%s.fifo", server->server_name);
 
  	//close the join fifo
 	close(server->join_fd);
@@ -82,10 +82,8 @@ int server_add_client(server_t *server, join_t *join) {
   server->client[n].to_server_fd = open(server->client[n].to_server_fname, O_RDWR);
   server->client[n].to_client_fd = open(server->client[n].to_client_fname, O_RDWR);
   server->client[n].data_ready=0;
-  server->client[n].last_contact_time =
   server->n_clients += 1;
 
-  printf("%s has joined\n", server->client[n].name);
   mesg_t msg;
   strcpy(msg.name, join->name);
   msg.kind = BL_JOINED;
@@ -164,7 +162,6 @@ void server_check_sources(server_t *server){
   // Iterates through every single to_server fifo and look for a message.
   for(int i=0; i<server->n_clients; i++){
       if (FD_ISSET(server->client[i].to_server_fd, &readset)){
-          printf("here__22: %d\n",server->client[i].data_ready);
           server->client[i].data_ready = 1;  //1 for ready
       }
   }
@@ -189,68 +186,76 @@ int server_join_ready(server_t *server){
 }
 
 int server_handle_join(server_t *server){
-  printf("Handling join...\n");
-
   join_t join;
   int nread = read(server->join_fd, &join, sizeof(join_t));
   if(nread == -1) {
     perror("ERRORNO Indicates: \n");
   }
-  printf("join.name: %s\n", join.name);
-  printf("join.clfname: %s\n", join.to_client_fname);
-  printf("join.svfname: %s\n", join.to_server_fname);
+
   server_add_client(server, &join);
   server->join_ready = 0;
-
-  printf("Finshing Handle Join...\n");
   return server->join_ready;
 }
 
 int server_client_ready(server_t *server, int idx){
-  printf("In server_client_ready...\n");
   // Return the data_ready field of the given client which indicates
   return server->client[idx].data_ready; // whether the client has data ready to be read from it.
 }
 
 int server_handle_client(server_t *server, int idx){
-  printf("Handling client...\n");
-  if(server_client_ready(server, idx)) {// Process a message from the specified client. This function should
-      // First clear the client's data_ready flag
+  printf("Here in server_handle_client...\n");
+  if(server_client_ready(server, idx)) {
+      printf("just to make sure\n");
       server->client[idx].data_ready = 0;
       mesg_t mesg;
       int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t)); // only be called if server_client_ready() returns true.
-      printf("mesg->name: %s\n", mesg.name);
-      printf("mesg->kind: %d\n", mesg.kind);
-      printf("mesg->body: %s\n", mesg.body);
+      printf("%s just sent mesg.kind = %d\n", server->client[idx].name, mesg.kind);
       switch(mesg.kind) {
         case BL_MESG:
-        case BL_JOINED:
-        case BL_PING:
-          server->client[idx].last_contact_time = (int)time(NULL);
         case BL_DEPARTED:
           server_broadcast(server, &mesg);
-
+          break;
+        case BL_PING:
+          server->client[idx].last_contact_time = server->time_sec;
+          printf("Client Number %d, Last contacted time: %d.\n", idx, server->client[idx].last_contact_time);
+          break;
       }
 
   }
-  printf("Leaving Handle client...\n");
   return 0;
   // ADVANCED: Update the last_contact_time of the client to the current
   // Ping responses should only change the last_contact_time below. Behavior
   // for other message types is not specified. Clear the client's data_ready flag so it has value 0.
 }
 
-void server_remove_disconnected(server_t *server, int disconnect_secs) {
+void server_tick(server_t *server) {
+  server-> time_sec = (int)time(NULL);
+  return NULL;
+}
+
+void server_ping_clients(server_t *server) {
   mesg_t msg;
   msg.kind = BL_PING;
   server_broadcast(server, &msg);
+  return NULL;
+}
+
+void server_remove_disconnected(server_t *server, int disconnect_secs) {
+  printf("Pinging all the existing clients...\n");
+  server_tick(server);
+  server_ping_clients(server);
   for(int i = 0; i < server->n_clients; i++) {
-    if((int)time(NULL) - server->client[i].last_contact_time > disconnect_secs) {
-      server_remove_client(server, i);
+    printf("The current server time : %d\n", server->time_sec);
+    printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
+    if(server->time_sec - server->client[i].last_contact_time >= disconnect_secs) {
+      mesg_t msg;
       msg.kind = BL_DISCONNECTED;
       strcpy(msg.name, server->client[i].name);
+      server_remove_client(server, i);
       server_broadcast(server, &msg);
+      printf("%s has disconnect from server\n", msg.name);
     }
   }
+  printf("Finished pinging all the existing clients...\n");
   return NULL;
 }

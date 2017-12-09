@@ -55,12 +55,13 @@ void *background_worker(void *arg){
         iprintf(simpio, "-- %s DEPARTED --\n", msg.name);
         break;
       case BL_SHUTDOWN:
-        iprintf(simpio, "!!! server is shutting down !!!");
+        iprintf(simpio, "!!! server is shutting down !!!\n");
         break;
       case BL_PING:
         ping_msg.kind = BL_PING;
         strcpy(ping_msg.name, client_actual.name);
         write(client_actual.to_server_fd, &ping_msg, sizeof(mesg_t));
+        printf("I just pinged the server back!!\n");
         break;
       case BL_DISCONNECTED:
         iprintf(simpio, "-- %s DISCONNECTED --\n", msg.name);
@@ -84,14 +85,14 @@ int main(int argc, char *argv[]) {
 	char join_fname[MAXPATH];
 
   strcpy(client_actual.name, argv[2]);
-  sprintf(join_fname, "%s.fifo\0", argv[1]);
+  sprintf(join_fname, "%s.fifo", argv[1]);
 	// Sets to_client_actual_fname to the following format
 	// pid.client.fifo
-  sprintf(client_actual.to_client_fname, "%d_client.fifo\0", pid);
+  sprintf(client_actual.to_client_fname, "%d_client.fifo", pid);
 
 	// Sets to_server_fname to the following format:
 	// pid.server.fifo
-  sprintf(client_actual.to_server_fname, "%d_server.fifo\0", pid);
+  sprintf(client_actual.to_server_fname, "%d_server.fifo", pid);
 
 	// Sets the fields of the outgoing join_t structure
 	strcpy(join.name, client_actual.name);

@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
   server_start(&server, argv[1], DEFAULT_PERMS);
 
-  alarm(10);
+  //alarm(10);
   while(!signalled){
     // printf("001\n");
     // if(alarmed) {

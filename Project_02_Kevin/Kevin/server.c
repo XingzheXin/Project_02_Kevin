@@ -230,6 +230,7 @@ int server_handle_client(server_t *server, int idx){
 
 void server_tick(server_t *server) {
   server-> time_sec = (int)time(NULL);
+  printf("Current server time is: %d\n", server->time_sec);
   return NULL;
 }
 

@@ -22,7 +22,6 @@ server_t server;
 
 void handle_signals(int sig_num){
   if(sig_num == SIGINT || sig_num == SIGTERM) {
-    printf("INT/TERM signal received. setting flag...\n");
     signalled = 1;
     server_shutdown(&server);
     exit(1);
@@ -30,8 +29,8 @@ void handle_signals(int sig_num){
   }
   else if(sig_num == SIGALRM) {
     printf("Alarm just went off\n");
-    // alarmed = 1;
-    server_remove_disconnected(&server, DISCONNECT_SECS);
+    alarmed = 1;
+    // server_remove_disconnected(&server, DISCONNECT_SECS);
     alarm(10);
   }
   return;
@@ -59,11 +58,12 @@ int main(int argc, char *argv[]) {
   //alarm(10);
   while(!signalled){
     // printf("001\n");
-    // if(alarmed) {
-    //   printf("I am bing alarmed\n");
-    //   alarmed = 0;
-    //   server_remove_disconnected(&server, DISCONNECT_SECS);
-    // }
+    if(alarmed) {
+      printf("I am bing alarmed\n");
+      alarm(0);
+      alarmed = 0;
+      server_remove_disconnected(&server, DISCONNECT_SECS);
+    }
     server_check_sources(&server);
     if(server_join_ready(&server)) {
       server_handle_join(&server);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
          server_handle_client(&server, i);
        }
     }
-    //server_remove_disconnected(&server, DISCONNECT_SECS);
+    server_remove_disconnected(&server, DISCONNECT_SECS);
     // printf("signal = %d\n", signalled);
   }
 

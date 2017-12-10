@@ -42,7 +42,6 @@ void *background_worker(void *arg){
   while(1) {
     sleep(1);
     mesg_t msg;
-    mesg_t ping_msg;
     read(client_actual.to_client_fd, &msg, sizeof(mesg_t));
     switch(msg.kind) {
       case BL_MESG:
@@ -58,10 +57,7 @@ void *background_worker(void *arg){
         iprintf(simpio, "!!! server is shutting down !!!\n");
         break;
       case BL_PING:
-        ping_msg.kind = BL_PING;
-        strcpy(ping_msg.name, client_actual.name);
-        write(client_actual.to_server_fd, &ping_msg, sizeof(mesg_t));
-        printf("I just pinged the server back!!\n");
+        write(client_actual.to_server_fd, &msg, sizeof(mesg_t));
         break;
       case BL_DISCONNECTED:
         iprintf(simpio, "-- %s DISCONNECTED --\n", msg.name);
@@ -78,7 +74,6 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
   pid_t pid = getpid();
-  printf("%d\n", pid);
 
 	// construct a join_t structure ready to be sent to server fifo
 	join_t join;
@@ -110,14 +105,8 @@ int main(int argc, char *argv[]) {
   // Open the two fifos that are created
   client_actual.to_client_fd = open(client_actual.to_client_fname, O_RDWR);
   client_actual.to_server_fd = open(client_actual.to_server_fname, O_RDWR);
-  printf("Here_06\n");
 	int join_fd = open(join_fname, O_RDWR);
-  printf("join_fname: %s\n", join_fname);
-  printf("join.name: %s\n", join.name);
-  printf("join.cl: %s\n", join.to_client_fname);
-  printf("join.sv: %s\n", join.to_server_fname);
 
-  printf("Writing join_t struct to server....\n");
 	// Write the join_t structure to <server_name>.fifo
 	int check = write(join_fd, &join, sizeof(join_t));
   if(check == -1) {

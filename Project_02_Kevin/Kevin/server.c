@@ -38,20 +38,26 @@ void server_start(server_t *server, char *server_name, int perms) {
     exit(1);
   }
 
+  //****************************************
+  //Make the log file
+  char log_fname[MAXPATH];
+  sprintf(log_fname, "%s.log", server_name);
+  server->log_fd = open(log_fname, O_RDWR | O_CREAT);
   printf("server_start(): end\n");
   return;
 }
 
 void server_shutdown(server_t *server) {
   char fifo_name[MAXPATH];
-	sprintf(fifo_name, "%s.fifo", server->server_name);
+  char log_fname[MAXPATH];
 
+	sprintf(fifo_name, "%s.fifo", server->server_name);
+  sprintf(log_fname, "%s.log", server->server_name);
  	//close the join fifo
 	close(server->join_fd);
-
+  close(server->log_fd);
 	// remove the join fifo so no further clients can join
 	remove(fifo_name);
-
   mesg_t notice;
   notice.kind = BL_SHUTDOWN;
   server_broadcast(server, &notice);// Send a BL_SHUTDOWN message to all

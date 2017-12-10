@@ -187,7 +187,7 @@ int server_handle_client(server_t *server, int idx){
       server->client[idx].data_ready = 0;
       mesg_t mesg;
       int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t)); // only be called if server_client_ready() returns true.
-      printf("%s just sent mesg.kind = %d\n", server->client[idx].name, mesg.kind);
+      //printf("%s just sent mesg.kind = %d\n", server->client[idx].name, mesg.kind);
       switch(mesg.kind) {
         case BL_MESG:
           printf("mesg received from client %d %s : %s\n", idx, mesg.name, mesg.body);
@@ -232,9 +232,10 @@ void server_remove_disconnected(server_t *server, int disconnect_secs) {
   //printf("Pinging all the existing clients...\n");
   server_tick(server);
   server_ping_clients(server);
+  //sleep(3);
   for(int i = 0; i < server->n_clients; i++) {
-    //printf("The current server time : %d\n", server->time_sec);
-    //printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
+    // printf("The current server time : %d\n", server->time_sec);
+    // printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
     if(server->time_sec - server->client[i].last_contact_time >= disconnect_secs) {
       mesg_t msg;
       msg.kind = BL_DISCONNECTED;

@@ -11,6 +11,12 @@ client_t *client = &client_actual;
 pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
+// void sigint_handler(int signum) {
+//   remove(client_actual.to_client_fname);
+//   remove(client_actual.to_server_fname);
+//   exit(1);
+// }
+
 void *user_worker(void *arg){
   while(!simpio->end_of_input){
     simpio_reset(simpio);
@@ -68,6 +74,7 @@ void *background_worker(void *arg){
 }
 
 int main(int argc, char *argv[]) {
+  //signal(SIGINT, sigint_handler);
 
 	if(argc < 3) {
 		printf("usage: %s <server_name> <user_name>\n", argv[0]);

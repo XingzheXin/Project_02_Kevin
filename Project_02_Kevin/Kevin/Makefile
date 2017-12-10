@@ -1,6 +1,6 @@
 CFLAGS = -Wall -g
 CC = gcc $(CFLAGS)
-TARGETS= bl-server bl-client
+TARGETS= bl-server bl-client bl-showlog
 
 all: $(TARGETS)
 
@@ -16,6 +16,12 @@ bl-client.o: bl-client.c simpio.c util.c blather.h
 	$(CC) -c $<
 
 bl-server.o: bl-server.c simpio.c util.c blather.h
+	$(CC) -c $<
+
+bl-showlog: bl-showlog.o
+	$(CC) -c $<
+
+bl-showlog.o: bl-showlog.c blather.h
 	$(CC) -c $<
 
 server.o: server.c blather.h

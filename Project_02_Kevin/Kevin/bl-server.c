@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
     if(server_join_ready(&server)) {
       server_handle_join(&server);
     }
+    server_write_who(&server);
     // printf("002\n");
     for (int i=0; i<server.n_clients; i++) {
        if(server_client_ready(&server, i)) {

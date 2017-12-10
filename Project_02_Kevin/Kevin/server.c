@@ -132,11 +132,31 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
   for (int i=0; i< server->n_clients; i++){
     write(server->client[i].to_client_fd, mesg, sizeof(mesg_t));
   }
+  if(mesg->kind!=BL_PING){
+    server_log_message(server, mesg);
+  }
   if(mesg->kind == BL_MESG)
     printf("server_broadcast(): %d from %s - %s\n", mesg->kind, mesg->name, mesg->body);
   else if (mesg->kind == BL_DEPARTED)
     printf("server: depated client %s\n", mesg->name);
   return 0;
+}
+
+void server_log_message(server_t *server, mesg_t *mesg){
+    write(server->log_fd, mesg, sizeof(mesg_t));
+    printf("Tracking completed\n");
+    return;
+}
+
+void server_write_who(server_t *server){
+    who_t logged_in;
+    logged_in.n_clients = server->n_clients;
+    for (int i=0; i<logged_in.n_clients; i++){
+      strcpy(logged_in.names[i], server->client[i].name);
+    }
+
+    pwrite(server->log_fd, &logged_in, sizeof(who_t), 0);
+    return;
 }
 
 void server_check_sources(server_t *server){

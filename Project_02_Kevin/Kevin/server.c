@@ -59,6 +59,7 @@ void server_shutdown(server_t *server) {
 	// remove the join fifo so no further clients can join
 	remove(fifo_name);
   mesg_t notice;
+  memset(&notice, 0, sizeof(mesg_t));
   notice.kind = BL_SHUTDOWN;
   server_broadcast(server, &notice);// Send a BL_SHUTDOWN message to all
 
@@ -92,6 +93,7 @@ int server_add_client(server_t *server, join_t *join) {
   server->n_clients += 1;
 
   mesg_t msg;
+  memset(&msg, 0, sizeof(mesg_t));
   strcpy(msg.name, join->name);
   msg.kind = BL_JOINED;
   server_broadcast(server, &msg);
@@ -153,6 +155,7 @@ void server_log_message(server_t *server, mesg_t *mesg){
 
 void server_write_who(server_t *server){
     who_t logged_in;
+    memset(&logged_in, 0, sizeof(who_t));
     logged_in.n_clients = server->n_clients;
     for (int i=0; i<logged_in.n_clients; i++){
       strcpy(logged_in.names[i], server->client[i].name);
@@ -165,6 +168,7 @@ void server_write_who(server_t *server){
 void server_check_sources(server_t *server){
   int maxfd = server->join_fd;
   fd_set readset;
+  memset(&readset, 0, sizeof(fd_set));
   FD_ZERO(&readset);
   for (int i=0; i<server->n_clients; i++){
     if (server->client[i].to_server_fd > maxfd){
@@ -176,7 +180,7 @@ void server_check_sources(server_t *server){
 
   FD_SET(server->join_fd, &readset);
 
-  int nfds = select(maxfd+1, &readset, NULL, NULL, NULL);
+  select(maxfd+1, &readset, NULL, NULL, NULL);
 
   for(int i=0; i<server->n_clients; i++){
       if (FD_ISSET(server->client[i].to_server_fd, &readset)){
@@ -252,6 +256,7 @@ void server_tick(server_t *server) {
 
 void server_ping_clients(server_t *server) {
   mesg_t msg;
+  memset(&msg, 0, sizeof(mesg_t));
   msg.kind = BL_PING;
   server_broadcast(server, &msg);
   return NULL;
@@ -267,6 +272,7 @@ void server_remove_disconnected(server_t *server, int disconnect_secs) {
     // printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
     if(server->time_sec - server->client[i].last_contact_time >= disconnect_secs) {
       mesg_t msg;
+      memset(&msg, 0, sizeof(mesg_t));
       msg.kind = BL_DISCONNECTED;
       strcpy(msg.name, server->client[i].name);
       server_broadcast(server, &msg);

@@ -4,11 +4,11 @@ generate=0
 run_norm=1                                 # run normal tests
 run_valg=1                                 # run valgrind tests
 
-ticktime_norm=2
-ticktime_valg=2
+# ticktime_norm=2
+# ticktime_valg=1
 
-#ticktime_norm=0.05
-#ticktime_valg=0.5
+ticktime_norm=0.05
+ticktime_valg=0.5
 ticktime=$ticktime_valg
 
 function major_sep(){

@@ -31,6 +31,7 @@ int main(int argc, char const *argv[]) {
   {
     // fprintf(out_file, "Here in while loop displaying MSG\n");
     mesg_t msg;
+    memset(&msg, 0, sizeof(mesg_t));
     nread = read(in_fd, &msg, sizeof(mesg_t));
     //nbytes += nread;
     if(nread == 0) {

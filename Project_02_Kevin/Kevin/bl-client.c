@@ -22,22 +22,23 @@ int joined = 0;
 void *user_worker(void *arg){
   while(!simpio->end_of_input){
     simpio_reset(simpio);
-    //iprintf(simpio, "");                                          // print prompt
+    iprintf(simpio, "");                                          // print prompt
     while(!simpio->line_ready && !simpio->end_of_input) {          // read until line is complete
       simpio_get_char(simpio);
     }
     mesg_t msg;
+    memset(&msg, 0, sizeof(mesg_t));
     if(simpio->line_ready){
       // iprintf(simpio, "%2d You entered: %s\n",count,simpio->buf);
       // count++;
       iprintf(simpio, "");
       msg.kind = BL_MESG;
-      strcpy(msg.name, client_actual.name);
-      strcpy(msg.body, simpio->buf);
+      strncpy(msg.name, client_actual.name, MAXNAME);
+      strncpy(msg.body, simpio->buf, MAXLINE);
 
     }
     else if(simpio->end_of_input) {
-      strcpy(msg.name, client_actual.name);
+      strncpy(msg.name, client_actual.name, MAXNAME);
       msg.kind = BL_DEPARTED;
     }
     write(client_actual.to_server_fd, &msg, sizeof(mesg_t));
@@ -50,6 +51,7 @@ void *background_worker(void *arg){
   while(1) {
     sleep(1);
     mesg_t msg;
+    memset(&msg, 0, sizeof(mesg_t));
     read(client_actual.to_client_fd, &msg, sizeof(mesg_t));
     switch(msg.kind) {
       case BL_MESG:
@@ -87,6 +89,7 @@ int main(int argc, char *argv[]) {
 
 	// construct a join_t structure ready to be sent to server fifo
 	join_t join;
+  memset(&join, 0, sizeof(join_t));
 	char join_fname[MAXPATH];
 
   strcpy(client_actual.name, argv[2]);

@@ -8,7 +8,6 @@ int main(int argc, char const *argv[]) {
   //
   int in_fd = open(argv[1], O_RDONLY);
   FILE *out_file = stdout;
-  fprintf(out_file, "%s\n", "Here is the output of the log file");
   int count = 0;
   who_t who;
   int nbytes = 0;
@@ -35,7 +34,6 @@ int main(int argc, char const *argv[]) {
     nread = read(in_fd, &msg, sizeof(mesg_t));
     //nbytes += nread;
     if(nread == 0) {
-      fprintf(out_file, "No bytes left to read\n");
       break;
     }
     switch(msg.kind) {

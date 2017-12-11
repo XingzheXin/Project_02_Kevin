@@ -11,6 +11,7 @@ client_t *client = &client_actual;
 pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
+int joined = 0;
 // void sigint_handler(int signum) {
 //   remove(client_actual.to_client_fname);
 //   remove(client_actual.to_server_fname);
@@ -20,7 +21,7 @@ pthread_t background_thread;
 void *user_worker(void *arg){
   while(!simpio->end_of_input){
     simpio_reset(simpio);
-    iprintf(simpio, "");                                          // print prompt
+    //iprintf(simpio, "");                                          // print prompt
     while(!simpio->line_ready && !simpio->end_of_input) {          // read until line is complete
       simpio_get_char(simpio);
     }
@@ -55,6 +56,7 @@ void *background_worker(void *arg){
         break;
       case BL_JOINED:
         iprintf(simpio, "-- %s JOINED --\n", msg.name);
+        joined = 1;
         break;
       case BL_DEPARTED:
         iprintf(simpio, "-- %s DEPARTED --\n", msg.name);
@@ -123,13 +125,13 @@ int main(int argc, char *argv[]) {
 
 	// ***************************************************
   char prompt[MAXNAME];
-  snprintf(prompt, MAXNAME, "%s>> ","fgnd"); // create a prompt string
+  snprintf(prompt, MAXNAME, "%s>> ", argv[2]); // create a prompt string
   simpio_set_prompt(simpio, prompt);         // set the prompt
   simpio_reset(simpio);                      // initialize io
   simpio_noncanonical_terminal_mode();       // set the terminal into a compatible mode
-
-  pthread_create(&user_thread,   NULL, user_worker,   NULL);     // start user thread to read input
   pthread_create(&background_thread, NULL, background_worker, NULL);
+  pthread_create(&user_thread,   NULL, user_worker,   NULL);     // start user thread to read input
+
   pthread_join(user_thread, NULL);
   pthread_join(background_thread, NULL);
 

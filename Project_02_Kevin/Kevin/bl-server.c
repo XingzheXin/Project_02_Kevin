@@ -51,15 +51,15 @@ void sigint_handler(int signum) {
 //   return;
 // }
 
-void *threadproc(void *arg)
-{
-    while(!signalled)
-    {
-        sleep(1);
-        server_remove_disconnected(&server, DISCONNECT_SECS);
-    }
-    return 0;
-}
+// void *threadproc(void *arg)
+// {
+//     while(!signalled)
+//     {
+//         sleep(1);
+//         server_remove_disconnected(&server, DISCONNECT_SECS);
+//     }
+//     return 0;
+// }
 
 int main(int argc, char *argv[]) {
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigint_handler);
   // signal(SIGALRM, sigalrm_handler);
   server_start(&server, argv[1], DEFAULT_PERMS);
-  pthread_create(&tid, NULL, &threadproc, NULL);
+  //pthread_create(&tid, NULL, &threadproc, NULL);
   //alarm(1);
   while(1){
 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
     //server_remove_disconnected(&server, DISCONNECT_SECS);
     // printf("signal = %d\n", signalled);
   }
-  pthread_join(threadproc, NULL);
+  //pthread_join(threadproc, NULL);
   server_shutdown(&server);
   return 0;
 }

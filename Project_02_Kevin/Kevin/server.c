@@ -42,7 +42,7 @@ void server_start(server_t *server, char *server_name, int perms) {
   //Make the log file
   char log_fname[MAXPATH];
   sprintf(log_fname, "%s.log", server_name);
-  server->log_fd = open(log_fname, O_RDWR | O_CREAT);
+  server->log_fd = open(log_fname, O_RDWR | O_CREAT, 0666);
   printf("server_start(): end\n");
   return;
 }
@@ -146,8 +146,8 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
 }
 
 void server_log_message(server_t *server, mesg_t *mesg){
+    lseek(server->log_fd, 0, SEEK_END);
     write(server->log_fd, mesg, sizeof(mesg_t));
-    printf("Logging completed\n");
     return;
 }
 

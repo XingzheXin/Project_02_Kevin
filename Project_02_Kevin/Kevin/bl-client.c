@@ -49,7 +49,6 @@ void *user_worker(void *arg){
 
 void *background_worker(void *arg){
   while(1) {
-    sleep(1);
     mesg_t msg;
     memset(&msg, 0, sizeof(mesg_t));
     read(client_actual.to_client_fd, &msg, sizeof(mesg_t));
@@ -66,6 +65,7 @@ void *background_worker(void *arg){
         break;
       case BL_SHUTDOWN:
         iprintf(simpio, "!!! server is shutting down !!!\n");
+        pthread_cancel(user_thread);
         break;
       case BL_PING:
         write(client_actual.to_server_fd, &msg, sizeof(mesg_t));

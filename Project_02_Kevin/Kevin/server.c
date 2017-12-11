@@ -224,13 +224,13 @@ int server_handle_client(server_t *server, int idx){
           break;
         case BL_DISCONNECTED:
           printf("%s has disconnected from server\n", mesg.name);
-          server_broadcast(server, &mesg);
           server_remove_client(server, idx);
+          server_broadcast(server, &mesg);
           break;
         case BL_DEPARTED:
           printf("%s has depated from chat\n", mesg.name);
-          server_broadcast(server, &mesg);
           server_remove_client(server, idx);
+          server_broadcast(server, &mesg);
           break;
         case BL_PING:
           server->client[idx].last_contact_time = server->time_sec;

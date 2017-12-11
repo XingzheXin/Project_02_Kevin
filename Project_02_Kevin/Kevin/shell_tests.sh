@@ -4,8 +4,11 @@ generate=0
 run_norm=1                                 # run normal tests
 run_valg=1                                 # run valgrind tests
 
-ticktime_norm=0.05
-ticktime_valg=0.5
+ticktime_norm=2
+ticktime_valg=2
+
+#ticktime_norm=0.05
+#ticktime_valg=0.5
 ticktime=$ticktime_valg
 
 function major_sep(){
@@ -50,7 +53,7 @@ if [ "$run_norm" = "1" ]; then
     for i in $all_tests; do
         printf -v tid "test-%02d" "$i"         # test id for various places
         printf "TEST %2d %-18s : " "$i" "${tnames[i]}"
-        
+
         # Run the test
         outfiles=()
         eval "${setup[i]}"
@@ -66,15 +69,15 @@ if [ "$run_norm" = "1" ]; then
             outfile=${outfiles[c]}
             printf "%s\n" "${expect_outs[i]}" | awk -F '\t' "{print \$$((c+1))}" > ${outfile}.expect
             #printf "%s\n" "${expect_outs[i]}" > xxx
-            
+
             # -b ignore whitespace
             # -B ignore blank lines
             # -y do side-by-side comparison
             if ! diff -bBy ${outfile}.expect $outfile > ${outfile}.diff
             then
                 printf "FAIL\n"
-                minor_sep 
-                printf "Difference between '%s' and '%s'\n" "${outfile}.expect" "$outfile" 
+                minor_sep
+                printf "Difference between '%s' and '%s'\n" "${outfile}.expect" "$outfile"
                 printf "OUTPUT: EXPECT   vs   ACTUAL\n"
                 cat ${outfile}.diff
                 minor_sep
@@ -122,7 +125,7 @@ if [ "$run_valg" = "1" ]; then
 
         printf -v tid "test-%02d" "$i"         # test id for various places
         printf "TEST %2d %-18s : " "$i" "${tnames[i]}"
-        
+
         # Run the test
         outfiles=()
         eval "${setup[i]}"
@@ -153,7 +156,7 @@ if [ "$run_valg" = "1" ]; then
                 failed=1
             fi
         done
-        
+
         if [ "$failed" != "1" ]; then
             printf "ALL OK"
             ((NVALG++))
@@ -171,4 +174,3 @@ major_sep
 printf "OVERALL:\n"
 printf "%2d / %2d Normal correct\n" "$NPASS" "$NTESTS"
 printf "%2d / %2d Valgrind correct\n" "$NVALG" "$VTESTS"
-

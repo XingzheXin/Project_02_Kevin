@@ -12,13 +12,14 @@ bl-client: bl-client.o simpio.o util.o
 	$(CC) -o bl-client bl-client.o simpio.o util.o -lpthread
 	@echo bl-client is ready
 
+bl-showlog: bl-showlog.o
+	$(CC) -o bl-showlog bl-showlog.o
+	@echo bl-showlog is ready
+
 bl-client.o: bl-client.c simpio.c util.c blather.h
 	$(CC) -c $<
 
 bl-server.o: bl-server.c simpio.c util.c blather.h
-	$(CC) -c $<
-
-bl-showlog: bl-showlog.o
 	$(CC) -c $<
 
 bl-showlog.o: bl-showlog.c blather.h
@@ -35,8 +36,8 @@ simpio.o: simpio.c blather.h
 
 clean:
 	@echo Cleaning up object files
-	rm -f *.o *.fifo
+	rm -f *.o *.fifo *.log
 
 realclean:
 	@echo Removing objects and programs
-	rm -f *.o *.fifo bl-client bl-server
+	rm -f *.o *.fifo *.log bl-client bl-server bl-showlog

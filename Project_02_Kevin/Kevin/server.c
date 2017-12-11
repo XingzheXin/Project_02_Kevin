@@ -132,7 +132,10 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
   for (int i=0; i< server->n_clients; i++){
     write(server->client[i].to_client_fd, mesg, sizeof(mesg_t));
   }
-  if(mesg->kind!=BL_PING){
+  if(mesg->kind != BL_PING) {
+    printf("Logging message: \n");
+    printf("mesg.name = %s\n", mesg->name);
+    printf("mesg.kind = %d\n", mesg->kind);
     server_log_message(server, mesg);
   }
   if(mesg->kind == BL_MESG)
@@ -144,7 +147,7 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
 
 void server_log_message(server_t *server, mesg_t *mesg){
     write(server->log_fd, mesg, sizeof(mesg_t));
-    printf("Tracking completed\n");
+    printf("Logging completed\n");
     return;
 }
 

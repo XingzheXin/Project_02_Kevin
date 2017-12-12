@@ -1,5 +1,7 @@
 #include "blather.h"
 
+// All functions Checked, No errors found
+
 // Checked
 client_t *server_get_client(server_t *server, int idx) {
   // Error Checking
@@ -16,7 +18,7 @@ void server_start(server_t *server, char *server_name, int perms) {
   strcpy(server->server_name, server_name);
   server->join_ready = 0;
   server->n_clients = 0;
-  server->time_sec = (int)time(NULL);
+  server->time_sec = 0;
 
   // create a string with ".fifo" appended to server_name
   char join_fname[MAXPATH];
@@ -100,7 +102,7 @@ int server_add_client(server_t *server, join_t *join) {
   server->client[n].to_server_fd = open(server->client[n].to_server_fname, O_RDWR);
   server->client[n].to_client_fd = open(server->client[n].to_client_fname, O_RDWR);
   server->client[n].data_ready=0;
-  server->client[n].last_contact_time = (int)time(NULL);
+  server->client[n].last_contact_time = server->time_sec;
   server->n_clients += 1;
 
   // Broadcast join message to all users
@@ -149,16 +151,23 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
     write(server->client[i].to_client_fd, mesg, sizeof(mesg_t));
   }
 
-  // Log the message if it's not a ping
-  if(mesg->kind != BL_PING) {
-    server_log_message(server, mesg);
-  }
+  // Log the message
+  // No need to worry if it's a ping message because those aren't broadcasted
+  server_log_message(server, mesg);
 
   // The rest is for debugging purpose
-  if(mesg->kind == BL_MESG)
-    printf("server_broadcast(): %d from %s - %s\n", mesg->kind, mesg->name, mesg->body);
-  else if (mesg->kind == BL_DEPARTED)
-    printf("server: depated client %s\n", mesg->name);
+  switch(mesg->kind) {
+    case BL_MESG:
+      printf("server_broadcast(): %d from %s - %s\n", mesg->kind, mesg->name, mesg->body);
+      break;
+    case BL_DEPARTED:
+      printf("server: depated client %s\n", mesg->name);
+      break;
+    case BL_DISCONNECTED:
+      printf("%s has disconnect from server\n", mesg->name);
+      break;
+  }
+
   return 0;
 }
 
@@ -184,21 +193,24 @@ void server_check_sources(server_t *server) {
   // Wakes up, checks all fds
   for(int i=0; i<server->n_clients; i++) {
       if (FD_ISSET(server->client[i].to_server_fd, &readset)){
+          // printf("FD_ISSET value for clients: %d\n", FD_ISSET(server->client[i].to_server_fd, &readset));
           server->client[i].data_ready = 1;
       }
   }
 
   // If there is a join available, set the join_ready flag
-  if(FD_ISSET(server->join_fd, &readset)) server->join_ready = 1;
+  if(FD_ISSET(server->join_fd, &readset)) {
+    server->join_ready = 1;
+  }
   return;
 }
 
-// Check
+// Checked
 int server_join_ready(server_t *server) {
   return server->join_ready;
 }
 
-// Check
+// Checked
 // This function is called in main when server_join_ready returns true
 int server_handle_join(server_t *server) {
   join_t join;
@@ -215,52 +227,71 @@ int server_handle_join(server_t *server) {
   printf("server_process_join()\n");
 }
 
-int server_client_ready(server_t *server, int idx){
-  // Return the data_ready field of the given client which indicates
-  return server->client[idx].data_ready; // whether the client has data ready to be read from it.
+// Checked
+int server_client_ready(server_t *server, int idx) {
+  return server->client[idx].data_ready;
 }
 
-int server_handle_client(server_t *server, int idx){
+// Checked
+// This function is only called when server_client_ready returns true
+int server_handle_client(server_t *server, int idx) {
   server->client[idx].last_contact_time = server->time_sec;
-  if(server_client_ready(server, idx)) {
-      server->client[idx].data_ready = 0;
-      mesg_t mesg;
-      int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t)); // only be called if server_client_ready() returns true.
-      //printf("%s just sent mesg.kind = %d\n", server->client[idx].name, mesg.kind);
-      switch(mesg.kind) {
-        case BL_MESG:
-          printf("mesg received from client %d %s : %s\n", idx, mesg.name, mesg.body);
-          server_broadcast(server, &mesg);
-          break;
-        case BL_DISCONNECTED:
-          printf("%s has disconnected from server\n", mesg.name);
-          server_remove_client(server, idx);
-          server_broadcast(server, &mesg);
-          break;
-        case BL_DEPARTED:
-          printf("%s has depated from chat\n", mesg.name);
-          server_remove_client(server, idx);
-          server_broadcast(server, &mesg);
-          break;
-        case BL_PING:
-          server->client[idx].last_contact_time = server->time_sec;
-          printf("Client Number %d, Last contacted time: %d.\n", idx, server->client[idx].last_contact_time);
-          break;
-      }
+  server->client[idx].data_ready = 0;
+  mesg_t mesg;
+  memset(&mesg, 0, sizeof(mesg_t));
+  int n = read(server->client[idx].to_server_fd, &mesg, sizeof(mesg_t));
+  //printf("%s just sent mesg.kind = %d\n", server->client[idx].name, mesg.kind);
+  switch(mesg.kind) {
+    case BL_MESG:
+      printf("mesg received from client %d %s : %s\n", idx, mesg.name, mesg.body);
+      server_broadcast(server, &mesg);
+      break;
+    case BL_DISCONNECTED:
+      printf("%s has disconnected from server\n", mesg.name);
+      server_remove_client(server, idx);
+      server_broadcast(server, &mesg);
+      break;
+    case BL_DEPARTED:
+      printf("%s has depated from chat\n", mesg.name);
+      server_remove_client(server, idx);
+      server_broadcast(server, &mesg);
+      break;
+    case BL_PING:
+      server->client[idx].last_contact_time = server->time_sec;
+      // printf("Client Number %d, Last contacted time: %d.\n", idx, server->client[idx].last_contact_time);
+      break;
   }
+
   return 0;
-  // ADVANCED: Update the last_contact_time of the client to the current
-  // Ping responses should only change the last_contact_time below. Behavior
-  // for other message types is not specified. Clear the client's data_ready flag so it has value 0.
 }
 
-void server_tick(server_t *server) {
-  server-> time_sec = (int)time(NULL);
-  //printf("Current server time is: %d\n", server->time_sec);
+// Checked
+void server_remove_disconnected(server_t *server, int disconnect_secs) {
+  printf("Checking for disconnected users...\n");
+  for(int i = 0; i < server->n_clients; i++) {
+    // printf("The current server time : %d\n", server->time_sec);
+    // printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
+    if(server->time_sec - server->client[i].last_contact_time >= disconnect_secs) {
+      mesg_t msg;
+      memset(&msg, 0, sizeof(mesg_t));
+      msg.kind = BL_DISCONNECTED;
+      strcpy(msg.name, server->client[i].name);
+      server_remove_client(server, i);
+      server_broadcast(server, &msg);
+    }
+  }
   return NULL;
 }
 
+// Checked
+void server_tick(server_t *server) {
+  server-> time_sec += 1;
+  return NULL;
+}
+
+// Checked
 void server_ping_clients(server_t *server) {
+  printf("Pinging all existing clients...\n");
   mesg_t msg;
   memset(&msg, 0, sizeof(mesg_t));
   msg.kind = BL_PING;
@@ -268,41 +299,23 @@ void server_ping_clients(server_t *server) {
   return NULL;
 }
 
-void server_remove_disconnected(server_t *server, int disconnect_secs) {
-  printf("Pinging all the existing clients...\n");
-  // server_tick(server);
-  // server_ping_clients(server);
-  for(int i = 0; i < server->n_clients; i++) {
-    printf("The current server time : %d\n", server->time_sec);
-    printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
-    if(server->time_sec - server->client[i].last_contact_time >= disconnect_secs) {
-      mesg_t msg;
-      memset(&msg, 0, sizeof(mesg_t));
-      msg.kind = BL_DISCONNECTED;
-      strcpy(msg.name, server->client[i].name);
-      server_broadcast(server, &msg);
-      server_remove_client(server, i);
-      printf("%s has disconnect from server\n", msg.name);
+// Checked
+void server_write_who(server_t *server){
+    who_t who;
+    memset(&who, 0, sizeof(who_t));
+    who.n_clients = server->n_clients;
+    for (int i=0; i<who.n_clients; i++){
+      strcpy(who.names[i], server->client[i].name);
     }
-  }
-  printf("Finished pinging all the existing clients...\n");
-  return NULL;
-}
 
-void server_log_message(server_t *server, mesg_t *mesg){
-    lseek(server->log_fd, 0, SEEK_END);
-    write(server->log_fd, mesg, sizeof(mesg_t));
+    // Always write this to the start of the log file
+    pwrite(server->log_fd, &who, sizeof(who_t), 0);
     return;
 }
 
-void server_write_who(server_t *server){
-    who_t logged_in;
-    memset(&logged_in, 0, sizeof(who_t));
-    logged_in.n_clients = server->n_clients;
-    for (int i=0; i<logged_in.n_clients; i++){
-      strcpy(logged_in.names[i], server->client[i].name);
-    }
-
-    pwrite(server->log_fd, &logged_in, sizeof(who_t), 0);
+// Checked
+void server_log_message(server_t *server, mesg_t *mesg){
+    lseek(server->log_fd, 0, SEEK_END);
+    write(server->log_fd, mesg, sizeof(mesg_t));
     return;
 }

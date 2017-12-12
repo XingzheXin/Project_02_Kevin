@@ -11,8 +11,6 @@ client_t *client = &client_actual;
 pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
-int joined = 0;
-
 // void sigint_handler(int signum) {
 //   remove(client_actual.to_client_fname);
 //   remove(client_actual.to_server_fname);
@@ -58,7 +56,6 @@ void *background_worker(void *arg){
         break;
       case BL_JOINED:
         iprintf(simpio, "-- %s JOINED --\n", msg.name);
-        joined = 1;
         break;
       case BL_DEPARTED:
         iprintf(simpio, "-- %s DEPARTED --\n", msg.name);
@@ -95,7 +92,8 @@ int main(int argc, char *argv[]) {
   strcpy(client_actual.name, argv[2]);
   sprintf(join_fname, "%s.fifo", argv[1]);
 	// Sets to_client_actual_fname to the following format
-	// pid.client.fifo
+	// pid.client.fifoint signalled = 0;
+
   sprintf(client_actual.to_client_fname, "%d_client.fifo", pid);
 
 	// Sets to_server_fname to the following format:

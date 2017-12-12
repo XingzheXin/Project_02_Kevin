@@ -18,7 +18,7 @@ void sigterm_handler(int signum) {
 void sigint_handler(int signum) {
   pthread_cancel(ping_thread);
   server_shutdown(&server);
-  sleep(3);
+  sleep(1);
   exit(1);
   return;
 }
@@ -51,10 +51,11 @@ int main(int argc, char *argv[]) {
   while(!signalled){
     if(signalled) break;
       server_check_sources(&server);
+      server_write_who(&server);
       if(server_join_ready(&server)) {
         server_handle_join(&server);
       }
-      server_write_who(&server);
+
       for (int i=0; i<server.n_clients; i++) {
          if(server_client_ready(&server, i)) {//
            server_handle_client(&server, i);

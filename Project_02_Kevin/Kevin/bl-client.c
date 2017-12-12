@@ -3,8 +3,6 @@
 #include "string.h"
 
 char server_name[MAXNAME];
-mesg_t msg_arr[10];
-int n_msg = 0;
 simpio_t simpio_actual;
 simpio_t *simpio = &simpio_actual;
 
@@ -14,46 +12,45 @@ client_t *client = &client_actual;
 pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
-void msg_shift_down() {
-  printf("Here in msg_shift_down...\n");
-  for(int i = 0; i < n_msg-2; i++) {
-    msg_arr[i] = msg_arr[i+1];
-  }
-  n_msg--;
-}
-void show_last_ten() {
+void show_last_n(int n) {
   char log_fname[MAXNAME];
   sprintf(log_fname, "%s.log", server_name);
   int in_fd = open(log_fname, O_RDONLY);
-
-  lseek(in_fd, sizeof(who_t), SEEK_SET);
-  int nbytes = -1;
-  printf("Here!\n");
-  while(nbytes != 0) {
-    if(n_msg == 10) msg_shift_down();
-    nbytes = read(in_fd, &msg_arr[n_msg], sizeof(mesg_t));
-    n_msg++;
+  if(in_fd == -1) {
+    perror("ERRORNO INDICATES");
+    exit(1);
   }
+  int pos = lseek(in_fd, -n*sizeof(mesg_t), SEEK_END);
+  if(pos < sizeof(who_t)){
+    lseek(in_fd, sizeof(who_t), SEEK_SET);
+  }
+  int nbytes = -1;
+  mesg_t msg;
+  memset(&msg, 0, sizeof(mesg_t));
 
   iprintf(simpio, "====================\n");
-  iprintf(simpio, "LAST 10 MESSAGES\n");
-  for(int i = 0; i < n_msg; i++) {
-    switch(msg_arr[i].kind) {
+  iprintf(simpio, "LAST %d MESSAGES\n", n);
+  while(nbytes != 0) {
+    nbytes = read(in_fd, &msg, sizeof(mesg_t));
+    if(nbytes == 0) {
+      break;
+    }
+    switch(msg.kind) {
       case BL_MESG:
-        iprintf(simpio, "[%s] : %s\n", msg_arr[i].name, msg_arr[i].body);
+        iprintf(simpio, "[%s] : %s\n", msg.name, msg.body);
         break;
       case BL_JOINED:
-        iprintf(simpio, "-- %s JOINED --\n", msg_arr[i].name);
+        iprintf(simpio, "-- %s JOINED --\n", msg.name);
         break;
       case BL_DEPARTED:
-        iprintf(simpio, "-- %s DEPARTED --\n", msg_arr[i].name);
+        iprintf(simpio, "-- %s DEPARTED --\n", msg.name);
         break;
       case BL_SHUTDOWN:
         iprintf(simpio, "!!! server is shutting down !!!\n");
         pthread_cancel(user_thread);
         break;
       case BL_DISCONNECTED:
-        iprintf(simpio, "-- %s DISCONNECTED --\n", msg_arr[i].name);
+        iprintf(simpio, "-- %s DISCONNECTED --\n", msg.name);
         break;
     }
   }
@@ -71,12 +68,14 @@ void *user_worker(void *arg){
     mesg_t msg;
     memset(&msg, 0, sizeof(mesg_t));
     if(simpio->line_ready){
-      // Determin if %last 10 is typed by the user
-      char last[8];
-      strncpy(last, simpio->buf, 8);
-      if(strcmp(last, "%last 10") == 0) {
-        // Read the last 10 messages from the log file
-        show_last_ten();
+      int n;
+      // Determin if %last n is typed by the user
+      char cmd[6];
+      const char *usr_arg = &simpio->buf[6];
+      n = atoi(usr_arg);
+      strncpy(cmd, simpio->buf, 6);
+      if(strcmp(cmd, "%last ") == 0) {
+        show_last_n(n);
       }
       else {
         iprintf(simpio, "");

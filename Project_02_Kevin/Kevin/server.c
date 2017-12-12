@@ -1,5 +1,4 @@
 #include "blather.h"
-
 // All functions Checked, No errors found
 
 // Checked

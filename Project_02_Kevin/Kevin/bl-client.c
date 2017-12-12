@@ -2,6 +2,9 @@
 #include "stdio.h"
 #include "string.h"
 
+char server_name[MAXNAME];
+mesg_t msg_arr[10];
+int n_msg = 0;
 simpio_t simpio_actual;
 simpio_t *simpio = &simpio_actual;
 
@@ -11,11 +14,49 @@ client_t *client = &client_actual;
 pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
-// void sigint_handler(int signum) {
-//   remove(client_actual.to_client_fname);
-//   remove(client_actual.to_server_fname);
-//   exit(1);
-// }
+void msg_shift_down() {
+  for(int i = 0; i < 10; i++) {
+    msg_arr[i] = msg_arr[i+1];
+  }
+}
+void show_last_ten() {
+  char log_fname[MAXNAME];
+  sprintf(log_fname, "%s.log", server_name);
+  int in_fd = open(log_fname, O_RDONLY);
+  lseek(in_fd, sizeof(who_t), SEEK_SET);
+  int nbytes = -1;
+
+  while(nbytes != 0) {
+    if(n_msg == 10) msg_shift_down();
+    nbytes = read(in_fd, &msg_arr[n_msg], sizeof(mesg_t));
+    n_msg++;
+  }
+
+  iprintf(simpio, "====================\n");
+  iprintf(simpio, "LAST 10 MESSAGES\n");
+  for(int i = 0; i < n_msg; i++) {
+    switch(msg_arr[i].kind) {
+      case BL_MESG:
+        iprintf(simpio, "[%s] : %s\n", msg_arr[i].name, msg_arr[i].body);
+        break;
+      case BL_JOINED:
+        iprintf(simpio, "-- %s JOINED --\n", msg_arr[i].name);
+        break;
+      case BL_DEPARTED:
+        iprintf(simpio, "-- %s DEPARTED --\n", msg_arr[i].name);
+        break;
+      case BL_SHUTDOWN:
+        iprintf(simpio, "!!! server is shutting down !!!\n");
+        pthread_cancel(user_thread);
+        break;
+      case BL_DISCONNECTED:
+        iprintf(simpio, "-- %s DISCONNECTED --\n", msg_arr[i].name);
+        break;
+    }
+  }
+  iprintf(simpio, "====================\n");
+  close(in_fd);
+}
 
 void *user_worker(void *arg){
   while(!simpio->end_of_input){
@@ -27,8 +68,13 @@ void *user_worker(void *arg){
     mesg_t msg;
     memset(&msg, 0, sizeof(mesg_t));
     if(simpio->line_ready){
-      // iprintf(simpio, "%2d You entered: %s\n",count,simpio->buf);
-      // count++;
+      // Determin if %last 10 is typed by the user
+      char last[8];
+      strncpy(last, simpio->buf, 8);
+      if(strcmp(last, "%last 10") == 0) {
+        // Read the last 10 messages from the log file
+        show_last_ten();
+      }
       iprintf(simpio, "");
       msg.kind = BL_MESG;
       strncpy(msg.name, client_actual.name, MAXNAME);
@@ -82,6 +128,8 @@ int main(int argc, char *argv[]) {
 		printf("usage: %s <server_name> <user_name>\n", argv[0]);
 		exit(1);
 	}
+  strcpy(server_name, argv[1]);
+
   pid_t pid = getpid();
 
 	// construct a join_t structure ready to be sent to server fifo

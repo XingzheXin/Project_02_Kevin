@@ -266,7 +266,7 @@ int server_handle_client(server_t *server, int idx) {
 
 // Checked
 void server_remove_disconnected(server_t *server, int disconnect_secs) {
-  printf("Checking for disconnected users...\n");
+  // printf("Checking for disconnected users...\n");
   for(int i = 0; i < server->n_clients; i++) {
     // printf("The current server time : %d\n", server->time_sec);
     // printf("Client %d's last contact time : %d\n", i, server->client[i].last_contact_time);
@@ -290,7 +290,7 @@ void server_tick(server_t *server) {
 
 // Checked
 void server_ping_clients(server_t *server) {
-  printf("Pinging all existing clients...\n");
+  // printf("Pinging all existing clients...\n");
   mesg_t msg;
   memset(&msg, 0, sizeof(mesg_t));
   msg.kind = BL_PING;

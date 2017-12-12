@@ -15,17 +15,20 @@ pthread_t user_thread;          // thread managing user input
 pthread_t background_thread;
 
 void msg_shift_down() {
-  for(int i = 0; i < 10; i++) {
+  printf("Here in msg_shift_down...\n");
+  for(int i = 0; i < n_msg-2; i++) {
     msg_arr[i] = msg_arr[i+1];
   }
+  n_msg--;
 }
 void show_last_ten() {
   char log_fname[MAXNAME];
   sprintf(log_fname, "%s.log", server_name);
   int in_fd = open(log_fname, O_RDONLY);
+
   lseek(in_fd, sizeof(who_t), SEEK_SET);
   int nbytes = -1;
-
+  printf("Here!\n");
   while(nbytes != 0) {
     if(n_msg == 10) msg_shift_down();
     nbytes = read(in_fd, &msg_arr[n_msg], sizeof(mesg_t));
@@ -75,11 +78,12 @@ void *user_worker(void *arg){
         // Read the last 10 messages from the log file
         show_last_ten();
       }
-      iprintf(simpio, "");
-      msg.kind = BL_MESG;
-      strncpy(msg.name, client_actual.name, MAXNAME);
-      strncpy(msg.body, simpio->buf, MAXLINE);
-
+      else {
+        iprintf(simpio, "");
+        msg.kind = BL_MESG;
+        strncpy(msg.name, client_actual.name, MAXNAME);
+        strncpy(msg.body, simpio->buf, MAXLINE);
+      }
     }
     else if(simpio->end_of_input) {
       strncpy(msg.name, client_actual.name, MAXNAME);

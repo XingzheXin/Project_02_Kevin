@@ -151,7 +151,7 @@ int server_broadcast(server_t *server, mesg_t *mesg) {
   }
 
   // Log the message
-  // No need to worry if it's a ping message because those aren't broadcasted
+  if(mesg->kind != BL_PING)
   server_log_message(server, mesg);
 
   // The rest is for debugging purpose

@@ -43,10 +43,6 @@ int main(int argc, char *argv[]) {
     printf("usage: %s <name>\n",argv[0]);
     exit(1);
   }
-  //
-  // memset(&attr, 0, sizeof(pthread_attr_t));
-  // pthread_attr_init(&attr);
-  // pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
   signal(SIGINT, sigint_handler);
   signal(SIGTERM, sigterm_handler);
@@ -66,7 +62,6 @@ int main(int argc, char *argv[]) {
       }
   }
   pthread_join(&ping_thread, NULL);
-  // pthread_attr_destroy(&attr);
   server_shutdown(&server);
   return 0;
 }
